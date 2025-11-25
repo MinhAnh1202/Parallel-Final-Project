@@ -13,9 +13,12 @@ typedef struct {
     float* test_images;    // [10000 * 3072]  
     uint8_t* train_labels; // [50000]
     uint8_t* test_labels;  // [10000]
+    int* train_indices;
 } Cifar10;
 
 void load_cifar10(Cifar10* data);
 void normalize_cifar10(Cifar10* data);
+void shuffle_cifar10(Cifar10* data);
+void get_next_batch(Cifar10* data, size_t batch_size, size_t batch_id, float* batch_images);
 void print_cifar10(Cifar10* data);
 void free_cifar10(Cifar10* data);

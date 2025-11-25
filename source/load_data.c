@@ -34,6 +34,11 @@ void load_cifar10(Cifar10* data) {
         exit(EXIT_FAILURE);
     }
 
+    data->train_indices = (int*)malloc(TRAIN_NUM * sizeof(int));
+    for (int i = 0; i < TRAIN_NUM; i++) {
+        data->train_indices[i] = i; 
+    }
+
     //Load training data
     for (int i = 1; i <= 5; i++) {
         char filename[100];
@@ -59,6 +64,27 @@ void normalize_cifar10(Cifar10* data) {
     }
 }
 
+// Shuffle indices
+void shuffle_cifar10(Cifar10* data) {
+    for (int i = TRAIN_NUM - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int temp = data->train_indices[i];
+        data->train_indices[i] = data->train_indices[j];
+        data->train_indices[j] = temp;
+    }
+}
+
+void get_next_batch(Cifar10* data, size_t batch_size, size_t batch_id, float* batch_images) {
+    size_t start = batch_id * batch_size;
+    for (size_t i = 0; i < batch_size; i++) {
+        int idx = data->train_indices[start + i];
+
+        memcpy(batch_images + i * IMG_SIZE,
+               data->train_images + idx * IMG_SIZE,
+               IMG_SIZE * sizeof(float));
+    }
+}
+
 void print_cifar10(Cifar10* data){
     for (int i = 0; i < 2; i++) {
         printf("Label: %d\n", data->train_labels[i]);
@@ -80,7 +106,9 @@ void free_cifar10(Cifar10* data) {
     free(data->test_images);
     free(data->train_labels);
     free(data->test_labels);
+    free(data->train_indices);
     
     data->train_images = data->test_images = NULL;
     data->train_labels = data->test_labels = NULL;
+    data->train_indices = NULL;
 }
