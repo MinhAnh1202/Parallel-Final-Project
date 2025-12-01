@@ -113,6 +113,30 @@ float *h_b = (float*)malloc(max_b_bytes);
 
     // loss buffer
     CHECK_CUDA(cudaMalloc(&ae->d_loss, sizeof(float)));
+
+    // ---------- allocate activation gradients ----------
+    CHECK_CUDA(cudaMalloc(&ae->d_gx0,  bytes_x0));
+    CHECK_CUDA(cudaMalloc(&ae->d_gh1,  bytes_h1));
+    CHECK_CUDA(cudaMalloc(&ae->d_gp1,  bytes_p1));
+    CHECK_CUDA(cudaMalloc(&ae->d_gh2,  bytes_h2));
+    CHECK_CUDA(cudaMalloc(&ae->d_gp2,  bytes_p2));
+    CHECK_CUDA(cudaMalloc(&ae->d_gh3,  bytes_h3));
+    CHECK_CUDA(cudaMalloc(&ae->d_gu1,  bytes_u1));
+    CHECK_CUDA(cudaMalloc(&ae->d_gh4,  bytes_h4));
+    CHECK_CUDA(cudaMalloc(&ae->d_gu2,  bytes_u2));
+    CHECK_CUDA(cudaMalloc(&ae->d_gout, bytes_out));
+
+    // ---------- allocate weight gradients ----------
+    CHECK_CUDA(cudaMalloc(&ae->d_gw1, w1_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gb1, b1_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gw2, w2_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gb2, b2_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gw3, w3_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gb3, b3_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gw4, w4_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gb4, b4_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gw5, w5_bytes));
+    CHECK_CUDA(cudaMalloc(&ae->d_gb5, b5_bytes));
 }
 
 void gpu_autoencoder_free(GPUAutoencoder *ae) {
@@ -136,7 +160,103 @@ void gpu_autoencoder_free(GPUAutoencoder *ae) {
     cudaFree(ae->d_out);
 
     cudaFree(ae->d_loss);
+
+    // activation gradients
+    cudaFree(ae->d_gx0);
+    cudaFree(ae->d_gh1);
+    cudaFree(ae->d_gp1);
+    cudaFree(ae->d_gh2);
+    cudaFree(ae->d_gp2);
+    cudaFree(ae->d_gh3);
+    cudaFree(ae->d_gu1);
+    cudaFree(ae->d_gh4);
+    cudaFree(ae->d_gu2);
+    cudaFree(ae->d_gout);
+
+    // weight gradients
+    cudaFree(ae->d_gw1); cudaFree(ae->d_gb1);
+    cudaFree(ae->d_gw2); cudaFree(ae->d_gb2);
+    cudaFree(ae->d_gw3); cudaFree(ae->d_gb3);
+    cudaFree(ae->d_gw4); cudaFree(ae->d_gb4);
+    cudaFree(ae->d_gw5); cudaFree(ae->d_gb5);
 }
+
+void gpu_autoencoder_copy_weights_to_host(
+    GPUAutoencoder *ae,
+    float *h_w1, float *h_b1,
+    float *h_w2, float *h_b2,
+    float *h_w3, float *h_b3,
+    float *h_w4, float *h_b4,
+    float *h_w5, float *h_b5)
+{
+    const int K = 3;
+    int C_in1 = 3,   C_out1 = 256;
+    int C_in2 = 256, C_out2 = 128;
+    int C_in3 = 128, C_out3 = 128;
+    int C_in4 = 128, C_out4 = 256;
+    int C_in5 = 256, C_out5 = 3;
+
+    size_t w1_bytes = C_out1 * C_in1 * K * K * sizeof(float);
+    size_t b1_bytes = C_out1 * sizeof(float);
+    size_t w2_bytes = C_out2 * C_in2 * K * K * sizeof(float);
+    size_t b2_bytes = C_out2 * sizeof(float);
+    size_t w3_bytes = C_out3 * C_in3 * K * K * sizeof(float);
+    size_t b3_bytes = C_out3 * sizeof(float);
+    size_t w4_bytes = C_out4 * C_in4 * K * K * sizeof(float);
+    size_t b4_bytes = C_out4 * sizeof(float);
+    size_t w5_bytes = C_out5 * C_in5 * K * K * sizeof(float);
+    size_t b5_bytes = C_out5 * sizeof(float);
+
+    CHECK_CUDA(cudaMemcpy(h_w1, ae->d_w1, w1_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_b1, ae->d_b1, b1_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_w2, ae->d_w2, w2_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_b2, ae->d_b2, b2_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_w3, ae->d_w3, w3_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_b3, ae->d_b3, b3_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_w4, ae->d_w4, w4_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_b4, ae->d_b4, b4_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_w5, ae->d_w5, w5_bytes, cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_b5, ae->d_b5, b5_bytes, cudaMemcpyDeviceToHost));
+}
+
+void gpu_autoencoder_copy_weights_to_device(
+    GPUAutoencoder *ae,
+    const float *h_w1, const float *h_b1,
+    const float *h_w2, const float *h_b2,
+    const float *h_w3, const float *h_b3,
+    const float *h_w4, const float *h_b4,
+    const float *h_w5, const float *h_b5)
+{
+    const int K = 3;
+    int C_in1 = 3,   C_out1 = 256;
+    int C_in2 = 256, C_out2 = 128;
+    int C_in3 = 128, C_out3 = 128;
+    int C_in4 = 128, C_out4 = 256;
+    int C_in5 = 256, C_out5 = 3;
+
+    size_t w1_bytes = C_out1 * C_in1 * K * K * sizeof(float);
+    size_t b1_bytes = C_out1 * sizeof(float);
+    size_t w2_bytes = C_out2 * C_in2 * K * K * sizeof(float);
+    size_t b2_bytes = C_out2 * sizeof(float);
+    size_t w3_bytes = C_out3 * C_in3 * K * K * sizeof(float);
+    size_t b3_bytes = C_out3 * sizeof(float);
+    size_t w4_bytes = C_out4 * C_in4 * K * K * sizeof(float);
+    size_t b4_bytes = C_out4 * sizeof(float);
+    size_t w5_bytes = C_out5 * C_in5 * K * K * sizeof(float);
+    size_t b5_bytes = C_out5 * sizeof(float);
+
+    CHECK_CUDA(cudaMemcpy(ae->d_w1, h_w1, w1_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_b1, h_b1, b1_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_w2, h_w2, w2_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_b2, h_b2, b2_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_w3, h_w3, w3_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_b3, h_b3, b3_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_w4, h_w4, w4_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_b4, h_b4, b4_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_w5, h_w5, w5_bytes, cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(ae->d_b5, h_b5, b5_bytes, cudaMemcpyHostToDevice));
+}
+
 
 // Forward pass for ONE batch (no backward yet)
 float gpu_autoencoder_forward(
@@ -319,18 +439,27 @@ float gpu_autoencoder_forward(
 
     // ------------- (optional) compute MSE loss -------------
     float loss_value = 0.0f;
-    if (compute_loss) {
+        if (compute_loss) {
         int size = N * 3 * 32 * 32;
         CHECK_CUDA(cudaMemset(ae->d_loss, 0, sizeof(float)));
+
         int t = 256;
         int b = (size + t - 1) / t;
-        mse_loss_forward<<<b, t>>>(
+        size_t shmem_bytes = t * sizeof(float);
+
+        // kernel giờ trả về SUM(diff^2) vào d_loss
+        mse_loss_forward<<<b, t, shmem_bytes>>>(
             ae->d_out, ae->d_x0, ae->d_loss, size);
         CHECK_CUDA(cudaDeviceSynchronize());
-        CHECK_CUDA(cudaMemcpy(&loss_value, ae->d_loss,
+
+        float loss_sum = 0.0f;
+        CHECK_CUDA(cudaMemcpy(&loss_sum, ae->d_loss,
                               sizeof(float),
                               cudaMemcpyDeviceToHost));
+
+        loss_value = loss_sum / size;  // MSE = sum / size
     }
+
 
     // ------------- copy output back to host -------------
     size_t out_bytes = N * 3 * 32 * 32 * sizeof(float);
@@ -339,4 +468,415 @@ float gpu_autoencoder_forward(
                           cudaMemcpyDeviceToHost));
 
     return loss_value;
+}
+
+void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
+{
+    const int N = ae->N;
+    const int H0 = ae->H; // 32
+    const int W0 = ae->W; // 32
+    const int K = 3;
+    const int pad = 1;
+    const int stride = 1;
+
+    dim3 block2d(16, 16);
+
+    // ===== 1. dL/dout (MSE) =====
+    int size_out = N * 3 * 32 * 32;
+    {
+        int t = 256;
+        int b = (size_out + t - 1) / t;
+        mse_loss_backward<<<b, t>>>(
+            ae->d_out, ae->d_x0, ae->d_gout, size_out);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 2. Backward conv5: 256->3, 32x32 =====
+    {
+        int C_in = 256, C_out = 3;
+        int H = 32, W = 32;
+
+        // dU2
+        dim3 gridIn(
+            (W + block2d.x - 1) / block2d.x,
+            (H + block2d.y - 1) / block2d.y,
+            N * C_in);
+
+        conv2d_backward_input_naive<<<gridIn, block2d>>>(
+            ae->d_gout, ae->d_w5, ae->d_gu2,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dW5
+        int num_w = C_out * C_in * K * K;
+        int t = 256;
+        int b = (num_w + t - 1) / t;
+        conv2d_backward_weight_naive<<<b, t>>>(
+            ae->d_u2, ae->d_gout, ae->d_gw5,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dB5
+        int tb = 256;
+        int bb = (C_out + tb - 1) / tb;
+        conv2d_backward_bias_naive<<<bb, tb>>>(
+            ae->d_gout, ae->d_gb5,
+            N, C_out, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // SGD update W5,B5
+        int bw = (num_w + t - 1) / t;
+        sgd_update<<<bw, t>>>(ae->d_w5, ae->d_gw5, num_w, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int bbp = (C_out + t - 1) / t;
+        sgd_update<<<bbp, t>>>(ae->d_b5, ae->d_gb5, C_out, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 3. UpSample2x2 backward: U2 <- H4 =====
+    {
+        int C = 256;
+        int H = 16, W = 16;   // H4 size
+        int Hu = 32, Wu = 32; // U2 size
+
+        dim3 grid(
+            (W + block2d.x - 1) / block2d.x,
+            (H + block2d.y - 1) / block2d.y,
+            N * C);
+
+        upsample2x2_backward<<<grid, block2d>>>(
+            ae->d_gu2, ae->d_gh4,
+            N, C, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 4. ReLU backward h4 =====
+    {
+        int C = 256, H = 16, W = 16;
+        int size = N * C * H * W;
+        int t = 256;
+        int b = (size + t - 1) / t;
+        relu_backward<<<b, t>>>(
+            ae->d_h4, ae->d_gh4, ae->d_gh4, size);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 5. conv4 backward: 128->256, 16x16 (input U1, output H4) =====
+    {
+        int C_in = 128, C_out = 256;
+        int H = 16, W = 16;
+
+        // dU1
+        dim3 gridIn(
+            (W + block2d.x - 1) / block2d.x,
+            (H + block2d.y - 1) / block2d.y,
+            N * C_in);
+
+        conv2d_backward_input_naive<<<gridIn, block2d>>>(
+            ae->d_gh4, ae->d_w4, ae->d_gu1,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dW4
+        int num_w = C_out * C_in * K * K;
+        int t = 256;
+        int b = (num_w + t - 1) / t;
+        conv2d_backward_weight_naive<<<b, t>>>(
+            ae->d_u1, ae->d_gh4, ae->d_gw4,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dB4
+        int tb = 256;
+        int bb = (C_out + tb - 1) / tb;
+        conv2d_backward_bias_naive<<<bb, tb>>>(
+            ae->d_gh4, ae->d_gb4,
+            N, C_out, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // SGD W4,B4
+        int bw = (num_w + t - 1) / t;
+        sgd_update<<<bw, t>>>(ae->d_w4, ae->d_gw4, num_w, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int bbp = (C_out + t - 1) / t;
+        sgd_update<<<bbp, t>>>(ae->d_b4, ae->d_gb4, C_out, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 6. UpSample2x2 backward: U1 <- H3 =====
+    {
+        int C = 128;
+        int H = 8, W = 8;   // H3 size
+        int Hu = 16, Wu = 16;
+
+        dim3 grid(
+            (W + block2d.x - 1) / block2d.x,
+            (H + block2d.y - 1) / block2d.y,
+            N * C);
+
+        upsample2x2_backward<<<grid, block2d>>>(
+            ae->d_gu1, ae->d_gh3,
+            N, C, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 7. ReLU backward h3 =====
+    {
+        int C = 128, H = 8, W = 8;
+        int size = N * C * H * W;
+        int t = 256;
+        int b = (size + t - 1) / t;
+        relu_backward<<<b, t>>>(
+            ae->d_h3, ae->d_gh3, ae->d_gh3, size);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 8. conv3 backward: 128->128, 8x8 (input P2, output H3) =====
+    {
+        int C_in = 128, C_out = 128;
+        int H = 8, W = 8;
+
+        // dP2
+        dim3 gridIn(
+            (W + block2d.x - 1) / block2d.x,
+            (H + block2d.y - 1) / block2d.y,
+            N * C_in);
+
+        conv2d_backward_input_naive<<<gridIn, block2d>>>(
+            ae->d_gh3, ae->d_w3, ae->d_gp2,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dW3
+        int num_w = C_out * C_in * K * K;
+        int t = 256;
+        int b = (num_w + t - 1) / t;
+        conv2d_backward_weight_naive<<<b, t>>>(
+            ae->d_p2, ae->d_gh3, ae->d_gw3,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dB3
+        int tb = 256;
+        int bb = (C_out + tb - 1) / tb;
+        conv2d_backward_bias_naive<<<bb, tb>>>(
+            ae->d_gh3, ae->d_gb3,
+            N, C_out, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // SGD W3,B3
+        int bw = (num_w + t - 1) / t;
+        sgd_update<<<bw, t>>>(ae->d_w3, ae->d_gw3, num_w, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int bbp = (C_out + t - 1) / t;
+        sgd_update<<<bbp, t>>>(ae->d_b3, ae->d_gb3, C_out, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 9. MaxPool2x2 backward: P2 <- H2 =====
+    {
+        int C = 128;
+        int H = 16, W = 16; // H2 size
+
+        dim3 grid(
+            (W/2 + block2d.x - 1) / block2d.x,
+            (H/2 + block2d.y - 1) / block2d.y,
+            N * C);
+
+        maxpool2x2_backward<<<grid, block2d>>>(
+            ae->d_h2, ae->d_gp2, ae->d_gh2,
+            N, C, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 10. ReLU backward h2 =====
+    {
+        int C = 128, H = 16, W = 16;
+        int size = N * C * H * W;
+        int t = 256;
+        int b = (size + t - 1) / t;
+        relu_backward<<<b, t>>>(
+            ae->d_h2, ae->d_gh2, ae->d_gh2, size);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 11. conv2 backward: 256->128, 16x16 (input P1, output H2) =====
+    {
+        int C_in = 256, C_out = 128;
+        int H = 16, W = 16;
+
+        // dP1
+        dim3 gridIn(
+            (W + block2d.x - 1) / block2d.x,
+            (H + block2d.y - 1) / block2d.y,
+            N * C_in);
+
+        conv2d_backward_input_naive<<<gridIn, block2d>>>(
+            ae->d_gh2, ae->d_w2, ae->d_gp1,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dW2
+        int num_w = C_out * C_in * K * K;
+        int t = 256;
+        int b = (num_w + t - 1) / t;
+        conv2d_backward_weight_naive<<<b, t>>>(
+            ae->d_p1, ae->d_gh2, ae->d_gw2,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dB2
+        int tb = 256;
+        int bb = (C_out + tb - 1) / tb;
+        conv2d_backward_bias_naive<<<bb, tb>>>(
+            ae->d_gh2, ae->d_gb2,
+            N, C_out, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // SGD W2,B2
+        int bw = (num_w + t - 1) / t;
+        sgd_update<<<bw, t>>>(ae->d_w2, ae->d_gw2, num_w, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int bbp = (C_out + t - 1) / t;
+        sgd_update<<<bbp, t>>>(ae->d_b2, ae->d_gb2, C_out, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 12. MaxPool2x2 backward: P1 <- H1 =====
+    {
+        int C = 256;
+        int H = 32, W = 32; // H1 size
+
+        dim3 grid(
+            (W/2 + block2d.x - 1) / block2d.x,
+            (H/2 + block2d.y - 1) / block2d.y,
+            N * C);
+
+        maxpool2x2_backward<<<grid, block2d>>>(
+            ae->d_h1, ae->d_gp1, ae->d_gh1,
+            N, C, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 13. ReLU backward h1 =====
+    {
+        int C = 256, H = 32, W = 32;
+        int size = N * C * H * W;
+        int t = 256;
+        int b = (size + t - 1) / t;
+        relu_backward<<<b, t>>>(
+            ae->d_h1, ae->d_gh1, ae->d_gh1, size);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // ===== 14. conv1 backward: 3->256, 32x32 (input X0, output H1) =====
+    {
+        int C_in = 3, C_out = 256;
+        int H = 32, W = 32;
+
+        // dX0 (không dùng tiếp nhưng tính cho đủ)
+        dim3 gridIn(
+            (W + block2d.x - 1) / block2d.x,
+            (H + block2d.y - 1) / block2d.y,
+            N * C_in);
+
+        conv2d_backward_input_naive<<<gridIn, block2d>>>(
+            ae->d_gh1, ae->d_w1, ae->d_gx0,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dW1
+        int num_w = C_out * C_in * K * K;
+        int t = 256;
+        int b = (num_w + t - 1) / t;
+        conv2d_backward_weight_naive<<<b, t>>>(
+            ae->d_x0, ae->d_gh1, ae->d_gw1,
+            N, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // dB1
+        int tb = 256;
+        int bb = (C_out + tb - 1) / tb;
+        conv2d_backward_bias_naive<<<bb, tb>>>(
+            ae->d_gh1, ae->d_gb1,
+            N, C_out, H, W);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // SGD W1,B1
+        int bw = (num_w + t - 1) / t;
+        sgd_update<<<bw, t>>>(ae->d_w1, ae->d_gw1, num_w, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int bbp = (C_out + t - 1) / t;
+        sgd_update<<<bbp, t>>>(ae->d_b1, ae->d_gb1, C_out, lr);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+}
+
+void gpu_autoencoder_save_weights(GPUAutoencoder *ae, const char *filename)
+{
+    const int K = 3;
+    int C_in1 = 3,   C_out1 = 256;
+    int C_in2 = 256, C_out2 = 128;
+    int C_in3 = 128, C_out3 = 128;
+    int C_in4 = 128, C_out4 = 256;
+    int C_in5 = 256, C_out5 = 3;
+
+    size_t w1_cnt = C_out1 * C_in1 * K * K;
+    size_t b1_cnt = C_out1;
+    size_t w2_cnt = C_out2 * C_in2 * K * K;
+    size_t b2_cnt = C_out2;
+    size_t w3_cnt = C_out3 * C_in3 * K * K;
+    size_t b3_cnt = C_out3;
+    size_t w4_cnt = C_out4 * C_in4 * K * K;
+    size_t b4_cnt = C_out4;
+    size_t w5_cnt = C_out5 * C_in5 * K * K;
+    size_t b5_cnt = C_out5;
+
+    float *h_w1 = (float*)malloc(w1_cnt * sizeof(float));
+    float *h_b1 = (float*)malloc(b1_cnt * sizeof(float));
+    float *h_w2 = (float*)malloc(w2_cnt * sizeof(float));
+    float *h_b2 = (float*)malloc(b2_cnt * sizeof(float));
+    float *h_w3 = (float*)malloc(w3_cnt * sizeof(float));
+    float *h_b3 = (float*)malloc(b3_cnt * sizeof(float));
+    float *h_w4 = (float*)malloc(w4_cnt * sizeof(float));
+    float *h_b4 = (float*)malloc(b4_cnt * sizeof(float));
+    float *h_w5 = (float*)malloc(w5_cnt * sizeof(float));
+    float *h_b5 = (float*)malloc(b5_cnt * sizeof(float));
+
+    gpu_autoencoder_copy_weights_to_host(
+        ae,
+        h_w1, h_b1,
+        h_w2, h_b2,
+        h_w3, h_b3,
+        h_w4, h_b4,
+        h_w5, h_b5);
+
+    FILE *f = fopen(filename, "wb");
+    if (!f) {
+        fprintf(stderr, "Cannot open %s for writing\n", filename);
+    } else {
+        fwrite(h_w1, sizeof(float), w1_cnt, f);
+        fwrite(h_b1, sizeof(float), b1_cnt, f);
+        fwrite(h_w2, sizeof(float), w2_cnt, f);
+        fwrite(h_b2, sizeof(float), b2_cnt, f);
+        fwrite(h_w3, sizeof(float), w3_cnt, f);
+        fwrite(h_b3, sizeof(float), b3_cnt, f);
+        fwrite(h_w4, sizeof(float), w4_cnt, f);
+        fwrite(h_b4, sizeof(float), b4_cnt, f);
+        fwrite(h_w5, sizeof(float), w5_cnt, f);
+        fwrite(h_b5, sizeof(float), b5_cnt, f);
+        fclose(f);
+        printf("Saved weights to %s\n", filename);
+    }
+
+    free(h_w1); free(h_b1);
+    free(h_w2); free(h_b2);
+    free(h_w3); free(h_b3);
+    free(h_w4); free(h_b4);
+    free(h_w5); free(h_b5);
 }

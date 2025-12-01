@@ -10,7 +10,7 @@ static void read_batch(const char* filename, float* images_start, uint8_t* label
 
     uint8_t buffer[3073];
     for (int i = 0; i < 10000; i++) {
-        if (fread(buffer, 1, 3073, f) != 3073) {  
+        if (fread(buffer, 1, 3073, f) != 3073) {
             fprintf(stderr, "Error: incomplete read in %s at image %d\n", filename, i);
             fclose(f);
             exit(EXIT_FAILURE);
@@ -30,7 +30,7 @@ void load_cifar10(Cifar10* data, const char* data_dir) {
     data->train_labels = (uint8_t*)malloc(TRAIN_NUM * sizeof(uint8_t));
     data->test_labels  = (uint8_t*)malloc(TEST_NUM  * sizeof(uint8_t));
 
-    if (!data->train_images || !data->test_images || 
+    if (!data->train_images || !data->test_images ||
         !data->train_labels  || !data->test_labels) {
         fprintf(stderr, "ERROR: Memory allocation failed!\n");
         exit(EXIT_FAILURE);
@@ -38,7 +38,7 @@ void load_cifar10(Cifar10* data, const char* data_dir) {
 
     data->train_indices = (int*)malloc(TRAIN_NUM * sizeof(int));
     for (int i = 0; i < TRAIN_NUM; i++) {
-        data->train_indices[i] = i; 
+        data->train_indices[i] = i;
     }
 
     // Load training data: data_batch_1.bin ... data_batch_5.bin

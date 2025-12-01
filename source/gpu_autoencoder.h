@@ -41,11 +41,47 @@ struct GPUAutoencoder {
 
     // Loss buffer
     float *d_loss; // single float on device
+
+    // ---- gradients for activations ----
+    float *d_gx0;
+    float *d_gh1;
+    float *d_gp1;
+    float *d_gh2;
+    float *d_gp2;
+    float *d_gh3;
+    float *d_gu1;
+    float *d_gh4;
+    float *d_gu2;
+    float *d_gout;
+
+    // ---- gradients for weights ----
+    float *d_gw1, *d_gb1;
+    float *d_gw2, *d_gb2;
+    float *d_gw3, *d_gb3;
+    float *d_gw4, *d_gb4;
+    float *d_gw5, *d_gb5;
 };
 
 // API
 void gpu_autoencoder_init(GPUAutoencoder *ae, int batch_size);
 void gpu_autoencoder_free(GPUAutoencoder *ae);
+
+void gpu_autoencoder_copy_weights_to_host(
+    GPUAutoencoder *ae,
+    float *h_w1, float *h_b1,
+    float *h_w2, float *h_b2,
+    float *h_w3, float *h_b3,
+    float *h_w4, float *h_b4,
+    float *h_w5, float *h_b5);
+
+void gpu_autoencoder_copy_weights_to_device(
+    GPUAutoencoder *ae,
+    const float *h_w1, const float *h_b1,
+    const float *h_w2, const float *h_b2,
+    const float *h_w3, const float *h_b3,
+    const float *h_w4, const float *h_b4,
+    const float *h_w5, const float *h_b5);
+
 
 // Forward on GPU:
 //   h_input  : host pointer [N * 3 * 32 * 32]
@@ -57,3 +93,7 @@ float gpu_autoencoder_forward(
     const float *h_input,
     float *h_output,
     bool compute_loss = true);
+
+void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr);
+
+void gpu_autoencoder_save_weights(GPUAutoencoder *ae, const char *filename);

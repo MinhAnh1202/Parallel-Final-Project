@@ -1,3 +1,4 @@
+//%%writefile gpu_layers.h
 #pragma once
 #include <cuda_runtime.h>
 #include <stdio.h>
@@ -45,3 +46,51 @@ __global__ void mse_loss_forward(
     const float* __restrict__ target,
     float* __restrict__ loss,   // single float on device
     int size);
+
+__global__ void relu_backward(
+    const float* __restrict__ x,       // forward output/input to ReLU
+    const float* __restrict__ grad_y,  // dL/dy
+    float* __restrict__ grad_x,        // dL/dx
+    int size);
+
+__global__ void maxpool2x2_backward(
+    const float* __restrict__ input,
+    const float* __restrict__ grad_out,
+    float* __restrict__ grad_in,
+    int N, int C, int H, int W);
+
+__global__ void upsample2x2_backward(
+    const float* __restrict__ grad_out,
+    float* __restrict__ grad_in,
+    int N, int C, int H, int W);
+
+__global__ void mse_loss_backward(
+    const float* __restrict__ output,
+    const float* __restrict__ target,
+    float* __restrict__ grad_out,
+    int size);
+
+__global__ void conv2d_backward_input_naive(
+    const float* __restrict__ dY,
+    const float* __restrict__ weight,
+    float* __restrict__ dX,
+    int N, int C_in, int H, int W,
+    int C_out, int K, int pad, int stride);
+
+__global__ void conv2d_backward_weight_naive(
+    const float* __restrict__ input,
+    const float* __restrict__ dY,
+    float* __restrict__ dW,
+    int N, int C_in, int H, int W,
+    int C_out, int K, int pad, int stride);
+
+__global__ void conv2d_backward_bias_naive(
+    const float* __restrict__ dY,
+    float* __restrict__ dB,
+    int N, int C_out, int H_out, int W_out);
+
+__global__ void sgd_update(
+    float* __restrict__ param,
+    const float* __restrict__ grad,
+    int size,
+    float lr);
