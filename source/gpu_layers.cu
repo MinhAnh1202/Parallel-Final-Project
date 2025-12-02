@@ -1,14 +1,14 @@
-//%%writefile gpu_layers.cu
+%%writefile gpu_layers.cu
 // your kernels
 #include "gpu_layers.h"
 
 // --------------- Conv2D forward (naive) ------------------
 // each thread computes ONE output pixel (n, c_out, h_out, w_out)
 __global__ void conv2d_forward_naive(
-    const float* __restrict__ input,
-    const float* __restrict__ weight,
-    const float* __restrict__ bias,
-    float* __restrict__ output,
+    const float* __restrict__ input,   // [N, C_in, H, W]
+    const float* __restrict__ weight,  // [C_out, C_in, K, K]
+    const float* __restrict__ bias,    // [C_out]
+    float* __restrict__ output,        // [N, C_out, H_out, W_out]
     int N, int C_in, int H, int W,
     int C_out, int K, int pad, int stride)
 {
@@ -17,7 +17,7 @@ __global__ void conv2d_forward_naive(
 
     int w_out = blockIdx.x * blockDim.x + threadIdx.x;
     int h_out = blockIdx.y * blockDim.y + threadIdx.y;
-    int nc    = blockIdx.z;  // pack (n, c_out) into z-dimension
+    int nc    = blockIdx.z;  // pack (n, c_out)
 
     if (w_out >= W_out || h_out >= H_out) return;
 
@@ -35,17 +35,17 @@ __global__ void conv2d_forward_naive(
                 if (h_in < 0 || h_in >= H || w_in < 0 || w_in >= W)
                     continue;
 
-                int in_idx = idx4(n, c_in, h_in, w_in, C_in, H, W);
-
+                // NCHW: ((n*C + c)*H + h)*W + w
+                int in_idx = ((n * C_in + c_in) * H + h_in) * W + w_in;
                 int w_idx = (((c_out * C_in + c_in) * K) + kh) * K + kw;
                 sum += weight[w_idx] * input[in_idx];
             }
         }
     }
-
-    int out_idx = idx4(n, c_out, h_out, w_out, C_out, H_out, W_out);
+int out_idx = ((n * C_out + c_out) * H_out + h_out) * W_out + w_out;
     output[out_idx] = sum;
 }
+
 
 // --------------- ReLU ------------------
 __global__ void relu_forward(float* x, int size)

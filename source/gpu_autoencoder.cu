@@ -1,4 +1,4 @@
-//%%writefile gpu_autoencoder.cu
+%%writefile gpu_autoencoder.cu
 // your GPUAutoencoder implementation
 #include <cstdlib>
 #include <cstdio>
@@ -879,4 +879,183 @@ void gpu_autoencoder_save_weights(GPUAutoencoder *ae, const char *filename)
     free(h_w3); free(h_b3);
     free(h_w4); free(h_b4);
     free(h_w5); free(h_b5);
+}
+
+void gpu_autoencoder_load_weights(GPUAutoencoder *ae, const char *filename)
+{
+    const int K = 3;
+    int C_in1 = 3,   C_out1 = 256;
+    int C_in2 = 256, C_out2 = 128;
+    int C_in3 = 128, C_out3 = 128;
+    int C_in4 = 128, C_out4 = 256;
+    int C_in5 = 256, C_out5 = 3;
+
+    size_t w1_cnt = C_out1 * C_in1 * K * K;
+    size_t b1_cnt = C_out1;
+    size_t w2_cnt = C_out2 * C_in2 * K * K;
+    size_t b2_cnt = C_out2;
+    size_t w3_cnt = C_out3 * C_in3 * K * K;
+    size_t b3_cnt = C_out3;
+    size_t w4_cnt = C_out4 * C_in4 * K * K;
+    size_t b4_cnt = C_out4;
+    size_t w5_cnt = C_out5 * C_in5 * K * K;
+    size_t b5_cnt = C_out5;
+
+    float *h_w1 = (float*)malloc(w1_cnt * sizeof(float));
+    float *h_b1 = (float*)malloc(b1_cnt * sizeof(float));
+    float *h_w2 = (float*)malloc(w2_cnt * sizeof(float));
+    float *h_b2 = (float*)malloc(b2_cnt * sizeof(float));
+    float *h_w3 = (float*)malloc(w3_cnt * sizeof(float));
+    float *h_b3 = (float*)malloc(b3_cnt * sizeof(float));
+    float *h_w4 = (float*)malloc(w4_cnt * sizeof(float));
+    float *h_b4 = (float*)malloc(b4_cnt * sizeof(float));
+    float *h_w5 = (float*)malloc(w5_cnt * sizeof(float));
+    float *h_b5 = (float*)malloc(b5_cnt * sizeof(float));
+
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        fprintf(stderr, "Cannot open %s for reading\n", filename);
+        exit(1);
+    }
+
+    size_t r1 = fread(h_w1, sizeof(float), w1_cnt, f);
+    size_t r2 = fread(h_b1, sizeof(float), b1_cnt, f);
+    size_t r3 = fread(h_w2, sizeof(float), w2_cnt, f);
+    size_t r4 = fread(h_b2, sizeof(float), b2_cnt, f);
+    size_t r5 = fread(h_w3, sizeof(float), w3_cnt, f);
+    size_t r6 = fread(h_b3, sizeof(float), b3_cnt, f);
+    size_t r7 = fread(h_w4, sizeof(float), w4_cnt, f);
+    size_t r8 = fread(h_b4, sizeof(float), b4_cnt, f);
+    size_t r9 = fread(h_w5, sizeof(float), w5_cnt, f);
+    size_t r10 = fread(h_b5, sizeof(float), b5_cnt, f);
+    fclose(f);
+
+    if (r1 != w1_cnt || r2 != b1_cnt ||
+        r3 != w2_cnt || r4 != b2_cnt ||
+        r5 != w3_cnt || r6 != b3_cnt ||
+        r7 != w4_cnt || r8 != b4_cnt ||
+        r9 != w5_cnt || r10 != b5_cnt)
+    {
+        fprintf(stderr, "Error reading weights from %s\n", filename);
+        exit(1);
+    }
+
+    gpu_autoencoder_copy_weights_to_device(
+        ae,
+        h_w1, h_b1,
+        h_w2, h_b2,
+        h_w3, h_b3,
+        h_w4, h_b4,
+        h_w5, h_b5
+    );
+
+    free(h_w1); free(h_b1);
+    free(h_w2); free(h_b2);
+    free(h_w3); free(h_b3);
+    free(h_w4); free(h_b4);
+    free(h_w5); free(h_b5);
+
+    printf("Loaded weights from %s\n", filename);
+}
+
+void gpu_autoencoder_encode_batch(
+    GPUAutoencoder *ae,
+    const float *h_input,
+    float *h_latent,
+    int N_batch)
+{
+    const int H = ae->H;    // 32
+    const int W = ae->W;    // 32
+    const int K = 3;
+    const int pad = 1;
+    const int stride = 1;
+
+    // copy input [N_batch, 3, 32, 32] lên GPU
+    size_t in_bytes = (size_t)N_batch * 3 * H * W * sizeof(float);
+    CHECK_CUDA(cudaMemcpy(ae->d_x0, h_input, in_bytes, cudaMemcpyHostToDevice));
+
+    dim3 block2d(16, 16);
+
+    // ===== ENCODER =====
+    // conv1: 3 -> 256, 32x32 -> h1, rồi ReLU + MaxPool -> p1 (16x16)
+    {
+        int C_in = 3, C_out = 256;
+        int H_out = 32, W_out = 32;
+
+        dim3 gridConv(
+            (W_out + block2d.x - 1) / block2d.x,
+            (H_out + block2d.y - 1) / block2d.y,
+            N_batch * C_out
+        );
+
+        conv2d_forward_naive<<<gridConv, block2d>>>(
+            ae->d_x0, ae->d_w1, ae->d_b1, ae->d_h1,
+            N_batch, C_in, H, W, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int size = N_batch * C_out * H_out * W_out;
+        int t = 256;
+        int b = (size + t - 1) / t;
+        relu_forward<<<b, t>>>(ae->d_h1, size);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int Hp = 16, Wp = 16;
+        dim3 gridPool(
+            (Wp + block2d.x - 1) / block2d.x,
+            (Hp + block2d.y - 1) / block2d.y,
+            N_batch * C_out
+        );
+
+        maxpool2x2_forward<<<gridPool, block2d>>>(
+            ae->d_h1, ae->d_p1,
+            N_batch, C_out, H_out, W_out);
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // conv2: 256 -> 128, 16x16 -> h2, rồi ReLU + MaxPool -> p2 (8x8)
+    {
+        int C_in = 256, C_out = 128;
+        int H_in = 16, W_in = 16;
+        int H_out = 16, W_out = 16;
+
+        dim3 gridConv(
+            (W_out + block2d.x - 1) / block2d.x,
+            (H_out + block2d.y - 1) / block2d.y,
+            N_batch * C_out
+        );
+
+        conv2d_forward_naive<<<gridConv, block2d>>>(
+            ae->d_p1, ae->d_w2, ae->d_b2, ae->d_h2,
+            N_batch, C_in, H_in, W_in, C_out, K, pad, stride);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int size = N_batch * C_out * H_out * W_out;
+        int t = 256;
+        int b = (size + t - 1) / t;
+        relu_forward<<<b, t>>>(ae->d_h2, size);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        int Hp = 8, Wp = 8;
+        dim3 gridPool(
+            (Wp + block2d.x - 1) / block2d.x,
+            (Hp + block2d.y - 1) / block2d.y,
+            N_batch * C_out
+        );
+
+        maxpool2x2_forward<<<gridPool, block2d>>>(
+            ae->d_h2, ae->d_p2,
+            N_batch, C_out, H_out, W_out);
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+         cudaError_t err = cudaGetLastError();
+   if (err != cudaSuccess) {
+       fprintf(stderr, "Kernel launch error: %s\n", cudaGetErrorString(err));
+   }
+   cudaDeviceSynchronize();
+    }
+    cudaDeviceSynchronize();
+
+size_t latent_bytes = (size_t)N_batch * AE_LATENT_DIM * sizeof(float);
+CHECK_CUDA(cudaMemcpy(h_latent, ae->d_p2, latent_bytes, cudaMemcpyDeviceToHost));
+
 }

@@ -1,7 +1,13 @@
-//%%writefile gpu_autoencoder.h
+%%writefile gpu_autoencoder.h
 // header for GPUAutoencoder (the struct + declarations)
 #pragma once
 #include "gpu_layers.h"
+
+// latent 128 x 8 x 8
+static const int AE_LATENT_C   = 128;
+static const int AE_LATENT_H   = 8;
+static const int AE_LATENT_W   = 8;
+static const int AE_LATENT_DIM = AE_LATENT_C * AE_LATENT_H * AE_LATENT_W;
 
 // This autoencoder matches the project architecture exactly.
 // Layout: NCHW [batch, channels, height, width]
@@ -97,3 +103,12 @@ float gpu_autoencoder_forward(
 void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr);
 
 void gpu_autoencoder_save_weights(GPUAutoencoder *ae, const char *filename);
+
+void gpu_autoencoder_load_weights(GPUAutoencoder *ae, const char *filename);
+
+// encode only: lấy latent [N_batch, 128, 8, 8] -> h_latent [N_batch, AE_LATENT_DIM]
+void gpu_autoencoder_encode_batch(
+    GPUAutoencoder *ae,
+    const float *h_input,
+    float *h_latent,
+    int N_batch);
