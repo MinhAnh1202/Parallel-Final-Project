@@ -194,7 +194,6 @@ void backward_autoencoder(CPUAutoEncoder* autoencoder) {
     int size_L1 = 32*32*256;
     int size_In = 32*32*3;
 
-    // 3. Vòng lặp Batch cho Backward
     for (int b = 0; b < bs; b++) {
         // Offset pointers
         float* ptr_dOut = autoencoder->loss_gradient + b * size_Out;
