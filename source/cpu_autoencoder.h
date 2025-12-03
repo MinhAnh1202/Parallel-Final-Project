@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <time.h>
+#include <string.h>
 // Định nghĩa kích thước Kernel/Stride/Padding
 #define KERNEL_SIZE 3
 #define POOL_SIZE 2
@@ -48,3 +49,5 @@ void forward_autoencoder(CPUAutoEncoder* autoencoder);
 void backward_autoencoder(CPUAutoEncoder* autoencoder);
 void update_autoencoder_parameters(CPUAutoEncoder* autoencoder);
 void save_weights(CPUAutoEncoder* autoencoder, const char* filename);
+void cpu_extract_features(CPUAutoEncoder* autoencoder, float* input_data, int num_images, float* features_output);
+void cpu_load_weights(CPUAutoEncoder* autoencoder, const char* filename);

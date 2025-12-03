@@ -296,3 +296,56 @@ void save_weights(CPUAutoEncoder* autoencoder, const char* filename) {
     fwrite(autoencoder->b5, sizeof(float), 3, file);
     fclose(file);
 }
+
+
+void cpu_extract_features(CPUAutoEncoder* autoencoder, float* input_data, int num_images, float* features_output) {
+    // Chỉ có forward pass của encoder
+    // Kích thước các lớp
+    int size_input = 32 * 32 * 3;
+    int size_L1 = 32 * 32 * 256;
+    int size_L2 = 16 * 16 * 256;
+    int size_L3 = 16 * 16 * 128;
+    int size_L4 = 8 * 8 * 128; 
+    for (int i = 0; i < num_images; i++) {
+        float* ptr_input = input_data + i * size_input;
+        float* ptr_feature_dst = features_output + i * size_L4;
+        float* ptr_L1 = autoencoder->conv1_output; 
+        float* ptr_L2 = autoencoder->pool1_output;
+        float* ptr_L3 = autoencoder->conv2_output;
+        float* ptr_L4 = autoencoder->pool2_output;
+        //  ENCODER FORWARD PASS
+        // L1: Conv1 + ReLU
+        Conv2D_Forward(ptr_input, 32, 32, 3, autoencoder->w1, KERNEL_SIZE, KERNEL_SIZE, autoencoder->b1, CONV_PADDING, CONV_STRIDE, 256, ptr_L1, 32, 32);
+        Relu(ptr_L1, size_L1, ptr_L1);
+        // L2: Pool1
+        MaxPool2D_Forward(ptr_L1, 32, 32, POOL_SIZE, POOL_SIZE, POOL_STRIDE, 256, ptr_L2, 16, 16);
+        // L3: Conv2 + ReLU
+        Conv2D_Forward(ptr_L2, 16, 16, 256, autoencoder->w2, KERNEL_SIZE, KERNEL_SIZE, autoencoder->b2, CONV_PADDING, CONV_STRIDE, 128, ptr_L3, 16, 16);
+        Relu(ptr_L3, size_L3, ptr_L3);
+        // L4: Pool2 (Latent Space)
+        MaxPool2D_Forward(ptr_L3, 16, 16, POOL_SIZE, POOL_SIZE, POOL_STRIDE, 128, ptr_L4, 8, 8);
+
+        // Sao chép kết quả vào mảng output tổng
+        memcpy(ptr_feature_dst, ptr_L4, size_L4 * sizeof(float));
+    }
+}
+
+void cpu_load_weights(CPUAutoEncoder* autoencoder, const char* filename) {
+    FILE* file = fopen(filename, "rb");
+    if (file == NULL) {
+        printf("Error opening file for reading weights.\n");
+        return;
+    }
+    // Đọc trọng số và bias của từng lớp Conv2D
+    fread(autoencoder->w1, sizeof(float), 256*3*3*3, file);
+    fread(autoencoder->b1, sizeof(float), 256, file);
+    fread(autoencoder->w2, sizeof(float), 128*256*3*3, file);
+    fread(autoencoder->b2, sizeof(float), 128, file);
+    fread(autoencoder->w3, sizeof(float), 128*128*3*3, file);
+    fread(autoencoder->b3, sizeof(float), 128, file);
+    fread(autoencoder->w4, sizeof(float), 256*128*3*3, file);
+    fread(autoencoder->b4, sizeof(float), 256, file);
+    fread(autoencoder->w5, sizeof(float), 3*256*3*3, file);
+    fread(autoencoder->b5, sizeof(float), 3, file);
+    fclose(file);
+}
