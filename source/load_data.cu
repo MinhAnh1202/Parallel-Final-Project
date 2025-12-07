@@ -17,14 +17,13 @@ static void read_batch(const char* filename, float* images_start, uint8_t* label
         }
         labels[i] = buffer[0];
         for (int j = 0; j < 3072; j++) {
-            images_start[i * 3072 + j] = (float)buffer[1 + j];  // uint8 -> float
+            images_start[i * 3072 + j] = (float)buffer[1 + j];  //Covert unit8 to float
         }
     }
     fclose(f);
 }
 
-// must match the prototype in load_data.h
-void load_cifar10(Cifar10* data, const char* data_dir) {
+void load_cifar10(Cifar10* data) {
     data->train_images = (float*)malloc(TRAIN_NUM * IMG_SIZE * sizeof(float));
     data->test_images  = (float*)malloc(TEST_NUM  * IMG_SIZE * sizeof(float));
     data->train_labels = (uint8_t*)malloc(TRAIN_NUM * sizeof(uint8_t));
@@ -41,33 +40,32 @@ void load_cifar10(Cifar10* data, const char* data_dir) {
         data->train_indices[i] = i;
     }
 
-    // Load training data: data_batch_1.bin ... data_batch_5.bin
+    //Load training data
     for (int i = 1; i <= 5; i++) {
-        char filename[512];
-        snprintf(filename, sizeof(filename), "%s/data_batch_%d.bin", data_dir, i);
+        char filename[100];
+        snprintf(filename, sizeof(filename), "cifar-10-batches-bin/data_batch_%d.bin", i);
         read_batch(filename,
                    data->train_images + (i-1) * 10000 * IMG_SIZE,
                    data->train_labels + (i-1) * 10000);
     }
 
-    // Load test data: test_batch.bin
-    char test_file[512];
-    snprintf(test_file, sizeof(test_file), "%s/test_batch.bin", data_dir);
-    read_batch(test_file,
+    //Load test data
+    read_batch("cifar-10-batches-bin/test_batch.bin",
                data->test_images, data->test_labels);
 
-    printf("CIFAR-10 loaded successfully from %s\n", data_dir);
+    printf("CIFAR-10 loaded successfully\n");
 }
 
 void normalize_cifar10(Cifar10* data) {
-    for (size_t i = 0; i < (size_t)TRAIN_NUM * IMG_SIZE; i++) {
+    for (size_t i = 0; i < TRAIN_NUM * IMG_SIZE; i++) {
         data->train_images[i] /= 255.0f;
     }
-    for (size_t i = 0; i < (size_t)TEST_NUM * IMG_SIZE; i++) {
+    for (size_t i = 0; i < TEST_NUM * IMG_SIZE; i++) {
         data->test_images[i] /= 255.0f;
     }
 }
 
+// Shuffle indices
 void shuffle_cifar10(Cifar10* data) {
     for (int i = TRAIN_NUM - 1; i > 0; i--) {
         int j = rand() % (i + 1);
@@ -81,10 +79,27 @@ void get_next_batch(Cifar10* data, size_t batch_size, size_t batch_id, float* ba
     size_t start = batch_id * batch_size;
     for (size_t i = 0; i < batch_size; i++) {
         int idx = data->train_indices[start + i];
+
         memcpy(batch_images + i * IMG_SIZE,
                data->train_images + idx * IMG_SIZE,
                IMG_SIZE * sizeof(float));
     }
+}
+
+void print_cifar10(Cifar10* data){
+    for (int i = 0; i < 2; i++) {
+        printf("Label: %d\n", data->train_labels[i]);
+        for (int j = 0; j < IMG_SIZE; j++) {
+            printf("%f ", data->train_images[i*IMG_SIZE + j]);
+        }
+        printf("\n");
+    }
+    // for (int i = 0; i < 2; i++) {
+    //     printf("Label: %d\n", data->test_labels[i]);
+    //     for (int j = 0; j < IMG_SIZE; j++) {
+    //         printf("%f ", data->test_images[i*IMG_SIZE + j]);
+    //     }
+    // }
 }
 
 void free_cifar10(Cifar10* data) {

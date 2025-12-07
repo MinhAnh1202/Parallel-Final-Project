@@ -34,11 +34,6 @@ struct GpuTimer {
 int main(int argc, char** argv) {
     srand((unsigned int)time(NULL));
 
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <path_to_cifar-10-batches-bin>\n", argv[0]);
-        return 1;
-    }
-    const char* data_dir = argv[1];
 
     printf("[MAIN] Start program\n");
     fflush(stdout);
@@ -56,7 +51,7 @@ int main(int argc, char** argv) {
 
     // ---- Load CIFAR-10 on CPU ----
     Cifar10 data;
-    load_cifar10(&data, data_dir);   // câu lệnh này in: CIFAR-10 loaded successfully ...
+    load_cifar10(&data);   // câu lệnh này in: CIFAR-10 loaded successfully ...
     printf("[MAIN] After load_cifar10\n");
     fflush(stdout);
 
@@ -66,13 +61,11 @@ int main(int argc, char** argv) {
 
     GpuTimer epoch_timer;
 
-    int batch_size = 32;
+    int batch_size = 64;
     int epochs     = 20;
     float lr       = 1e-3f;
 
     int num_batches = TRAIN_NUM / batch_size;
-    int max_batches = 150;
-    if (num_batches > max_batches) num_batches = max_batches;
 
     printf("[MAIN] Start training loop (epochs=%d, num_batches=%d)\n",
        epochs, num_batches);
@@ -94,8 +87,7 @@ int main(int argc, char** argv) {
         epoch_timer.tic();
 
         for (int b = 0; b < num_batches; ++b) {
-            int start_idx = b * batch_size;
-            get_next_batch(&data, batch_size, start_idx, h_batch);
+            get_next_batch(&data, batch_size, b, h_batch);
 
             float loss = gpu_autoencoder_forward(&ae, h_batch, h_output, true);
             gpu_autoencoder_backward(&ae, lr);
