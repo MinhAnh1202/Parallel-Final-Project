@@ -1,4 +1,5 @@
 %%writefile extract_svm_features.cu
+// dùng chung cho cả GPU naive, GPU opt1 và GPU opt2
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -6,6 +7,8 @@
 
 #include "load_data.h"
 #include "gpu_autoencoder.h"
+// #include "gpu_autoencoder_opt1.h"
+// #include "gpu_autoencoder_opt2.h"
 
 // ghi 1 dòng theo format LIBSVM: label index:val ...
 void write_svm_line(FILE* f, int label,
@@ -24,18 +27,17 @@ void write_svm_line(FILE* f, int label,
 
 int main(int argc, char** argv)
 {
-    if (argc < 3) {
+    if (argc < 2) {
         fprintf(stderr,
-                "Usage: %s <path_to_cifar-10-batches-bin> <ae_weights.bin>\n",
+                "Usage: %s <ae_weights.bin>\n",
                 argv[0]);
         return 1;
     }
-    const char* data_dir    = argv[1];
-    const char* weight_file = argv[2];
+    const char* weight_file = argv[1];
 
     printf("[SVM] Loading CIFAR-10...\n");
     Cifar10 data;
-    load_cifar10(&data, data_dir);
+    load_cifar10(&data);
     normalize_cifar10(&data);
 
     // batch_size cho encoder khi extract feature
