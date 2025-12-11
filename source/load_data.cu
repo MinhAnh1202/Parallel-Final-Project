@@ -1,4 +1,3 @@
-%%writefile load_data.cu
 #include "load_data.h"
 
 static void read_batch(const char* filename, float* images_start, uint8_t* labels) {

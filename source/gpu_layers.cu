@@ -1,4 +1,3 @@
-// gpu_layers.cu - CORRECTED VERSION (theo spec, không dùng atomicAdd)
 #include "gpu_layers.h"
 
 // --------------- Conv2D forward (không đổi) ------------------

@@ -1,6 +1,3 @@
-%%writefile main_gpu.cu
-// the UPDATED main() code with argc/argv
-// main_gpu.cu (DEBUG VERSION)
 #include <cstdio>
 #include <ctime>
 #include <cuda_runtime.h>

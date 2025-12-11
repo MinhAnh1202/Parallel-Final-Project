@@ -1,4 +1,3 @@
-%%writefile load_data.h
 #pragma once
 #include <stdint.h>
 #include <stdio.h>

@@ -1,4 +1,3 @@
-%%writefile gpu_autoencoder.cu
 // your GPUAutoencoder implementation
 #include <cstdlib>
 #include <cstdio>

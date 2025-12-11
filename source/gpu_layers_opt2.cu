@@ -1,8 +1,3 @@
-%%writefile gpu_layers_opt2.cu
-// ============================================================================
-// OPTIMIZED CONV2D - FIX CRITICAL ISSUES
-// Target: 12.83ms → 7-8ms (forward), similar for backward
-// ============================================================================
 
 #include <cuda_runtime.h>
 #include "gpu_layers_opt2.h"
@@ -18,10 +13,7 @@ void update_dc_bias(float* d_bias_ptr, int count) {
                                    0, cudaMemcpyDeviceToDevice));
 }
 
-// ============================================================================
-// FORWARD PASS - FIXED
-// Key fix: Efficient cooperative loading
-// ============================================================================
+
 __global__ void conv2d_forward_opt2(
     float* __restrict__ input,    // [N, C_in, H, W]
     float* __restrict__ weight,   // [C_out, C_in, K, K]
@@ -100,10 +92,6 @@ __global__ void conv2d_forward_opt2(
     }
 }
 
-// ============================================================================
-// BACKWARD INPUT - FIXED
-// Key fix: Parallel halo loading
-// ============================================================================
 
 __global__ void conv2d_backward_input_opt2(
     float* __restrict__ dY,     // [N, C_out, H, W]

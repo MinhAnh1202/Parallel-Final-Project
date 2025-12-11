@@ -1,4 +1,3 @@
-%%writefile gpu_layers_opt2.h
 #pragma once
 #include <cuda_runtime.h>
 #include <stdio.h>

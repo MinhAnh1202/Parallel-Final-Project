@@ -1,4 +1,3 @@
-%%writefile gpu_autoencoder_opt2.h
 // header for GPUAutoencoder (the struct + declarations)
 #pragma once
 #include "gpu_layers_opt2.h"

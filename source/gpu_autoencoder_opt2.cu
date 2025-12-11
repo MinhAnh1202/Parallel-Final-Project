@@ -1,4 +1,3 @@
-%%writefile gpu_autoencoder_opt2.cu
 #include "gpu_autoencoder_opt2.h"
 #include <cmath>
 

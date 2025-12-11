@@ -1,5 +1,4 @@
-%%writefile extract_svm_features.cu
-// dùng chung cho cả GPU naive, GPU opt1 và GPU opt2
+// File dùng chung cho cả GPU naive, GPU opt1 và GPU opt2
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
