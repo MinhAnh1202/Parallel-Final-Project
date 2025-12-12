@@ -46,23 +46,22 @@ void gpu_autoencoder_init(GPUAutoencoder *ae, int batch_size) {
     CHECK_CUDA(cudaMalloc(&ae->d_b5, b5_bytes));
 
     // init weights on host
-// find max weight bytes
-size_t max_w_bytes = w1_bytes;
-if (w2_bytes > max_w_bytes) max_w_bytes = w2_bytes;
-if (w3_bytes > max_w_bytes) max_w_bytes = w3_bytes;
-if (w4_bytes > max_w_bytes) max_w_bytes = w4_bytes;
-if (w5_bytes > max_w_bytes) max_w_bytes = w5_bytes;
+    // find max weight bytes
+    size_t max_w_bytes = w1_bytes;
+    if (w2_bytes > max_w_bytes) max_w_bytes = w2_bytes;
+    if (w3_bytes > max_w_bytes) max_w_bytes = w3_bytes;
+    if (w4_bytes > max_w_bytes) max_w_bytes = w4_bytes;
+    if (w5_bytes > max_w_bytes) max_w_bytes = w5_bytes;
 
-// find max bias bytes
-size_t max_b_bytes = b1_bytes;
-if (b2_bytes > max_b_bytes) max_b_bytes = b2_bytes;
-if (b3_bytes > max_b_bytes) max_b_bytes = b3_bytes;
-if (b4_bytes > max_b_bytes) max_b_bytes = b4_bytes;
-if (b5_bytes > max_b_bytes) max_b_bytes = b5_bytes;
+    // find max bias bytes
+    size_t max_b_bytes = b1_bytes;
+    if (b2_bytes > max_b_bytes) max_b_bytes = b2_bytes;
+    if (b3_bytes > max_b_bytes) max_b_bytes = b3_bytes;
+    if (b4_bytes > max_b_bytes) max_b_bytes = b4_bytes;
+    if (b5_bytes > max_b_bytes) max_b_bytes = b5_bytes;
 
-float *h_w = (float*)malloc(max_w_bytes);
-float *h_b = (float*)malloc(max_b_bytes);
-
+    float *h_w = (float*)malloc(max_w_bytes);
+    float *h_b = (float*)malloc(max_b_bytes);
 
     auto init_wb = [&](float *d_w, size_t w_bytes, float *d_b, size_t b_bytes) {
         size_t w_cnt = w_bytes / sizeof(float);
@@ -274,7 +273,7 @@ float gpu_autoencoder_forward(
         int C_in = 3, C_out = 256;
         int H_out = 32, W_out = 32;
 
-        // ✅ Grid configuration cho optimized kernel
+        // Grid configuration cho optimized kernel
         dim3 gridConv(
             (W_out + TILE_W - 1) / TILE_W,  // Ceiling division
             (H_out + TILE_H - 1) / TILE_H,
@@ -283,7 +282,7 @@ float gpu_autoencoder_forward(
         // Update constant memory bias
         update_dc_bias(ae->d_b1, C_out);
 
-        // ✅ Launch optimized kernel
+        // Launch optimized kernel
         conv2d_forward_opt2<<<gridConv, block2d>>>(
             ae->d_x0, ae->d_w1, ae->d_h1,
             N, C_in, H, W, C_out, pad, stride);
@@ -464,7 +463,7 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
     const int pad = 1;
     const int stride = 1;
 
-    // ✅ OPTIMIZATION: Zero gradients asynchronously in streams
+    // Zero all gradient buffers
     CHECK_CUDA(cudaMemset(ae->d_gw1, 0, 256 * 3 * K * K * sizeof(float)));
     CHECK_CUDA(cudaMemset(ae->d_gb1, 0, 256 * sizeof(float)));
     CHECK_CUDA(cudaMemset(ae->d_gw2, 0, 128 * 256 * K * K * sizeof(float)));
@@ -492,7 +491,7 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
         int C_in = 256, C_out = 3;
         int H = 32, W = 32;
 
-        // dU2 - ✅ OPTIMIZED KERNEL
+        // dU2 - OPTIMIZED KERNEL
         dim3 gridIn(
             (W + TILE_W - 1) / TILE_W,  // Use TILE_W instead of block2d.x
             (H + TILE_H - 1) / TILE_H,
@@ -502,13 +501,13 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
             ae->d_gout, ae->d_w5, ae->d_gu2,
             N, C_in, H, W, C_out, pad, stride);
 
-        // dW5 - ✅ OPTIMIZED KERNEL
+        // dW5 - OPTIMIZED KERNEL
         dim3 gridW(1, 1, C_out * C_in);
         conv2d_backward_weight_opt2<<<gridW, block2d>>>(
             ae->d_u2, ae->d_gout, ae->d_gw5,
             N, C_in, H, W, C_out, pad, stride);
 
-        // dB5 - ✅ OPTIMIZED KERNEL
+        // dB5 - OPTIMIZED KERNEL
         dim3 gridB(C_out);
         dim3 blockB(256);
         conv2d_backward_bias_opt2<<<gridB, blockB>>>(
@@ -554,7 +553,7 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
         int C_in = 128, C_out = 256;
         int H = 16, W = 16;
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridIn(
             (W + TILE_W - 1) / TILE_W,
             (H + TILE_H - 1) / TILE_H,
@@ -564,13 +563,13 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
             ae->d_gh4, ae->d_w4, ae->d_gu1,
             N, C_in, H, W, C_out, pad, stride);
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridW(1, 1, C_out * C_in);
         conv2d_backward_weight_opt2<<<gridW, block2d>>>(
             ae->d_u1, ae->d_gh4, ae->d_gw4,
             N, C_in, H, W, C_out, pad, stride);
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridB(C_out);
         dim3 blockB(256);
         conv2d_backward_bias_opt2<<<gridB, blockB>>>(
@@ -616,7 +615,7 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
         int C_in = 128, C_out = 128;
         int H = 8, W = 8;
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridIn(
             (W + TILE_W - 1) / TILE_W,
             (H + TILE_H - 1) / TILE_H,
@@ -626,13 +625,13 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
             ae->d_gh3, ae->d_w3, ae->d_gp2,
             N, C_in, H, W, C_out, pad, stride);
 
-        // ✅ OPTIMIZED (note: cudaMemset removed, already done at start)
+        // OPTIMIZED 
         dim3 gridW(1, 1, C_out * C_in);
         conv2d_backward_weight_opt2<<<gridW, block2d>>>(
             ae->d_p2, ae->d_gh3, ae->d_gw3,
             N, C_in, H, W, C_out, pad, stride);
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridB(C_out);
         dim3 blockB(256);
         conv2d_backward_bias_opt2<<<gridB, blockB>>>(
@@ -678,7 +677,7 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
         int C_in = 256, C_out = 128;
         int H = 16, W = 16;
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridIn(
             (W + TILE_W - 1) / TILE_W,
             (H + TILE_H - 1) / TILE_H,
@@ -688,13 +687,13 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
             ae->d_gh2, ae->d_w2, ae->d_gp1,
             N, C_in, H, W, C_out, pad, stride);
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridW(1, 1, C_out * C_in);
         conv2d_backward_weight_opt2<<<gridW, block2d>>>(
             ae->d_p1, ae->d_gh2, ae->d_gw2,
             N, C_in, H, W, C_out, pad, stride);
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridB(C_out);
         dim3 blockB(256);
         conv2d_backward_bias_opt2<<<gridB, blockB>>>(
@@ -740,7 +739,7 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
         int C_in = 3, C_out = 256;
         int H = 32, W = 32;
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridIn(
             (W + TILE_W - 1) / TILE_W,
             (H + TILE_H - 1) / TILE_H,
@@ -750,13 +749,13 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
             ae->d_gh1, ae->d_w1, ae->d_gx0,
             N, C_in, H, W, C_out, pad, stride);
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridW(1, 1, C_out * C_in);
         conv2d_backward_weight_opt2<<<gridW, block2d>>>(
             ae->d_x0, ae->d_gh1, ae->d_gw1,
             N, C_in, H, W, C_out, pad, stride);
 
-        // ✅ OPTIMIZED
+        // OPTIMIZED
         dim3 gridB(C_out);
         dim3 blockB(256);
         conv2d_backward_bias_opt2<<<gridB, blockB>>>(
@@ -941,7 +940,6 @@ void gpu_autoencoder_encode_batch(
             N_batch * C_out);
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b1, 256 * sizeof(float)));
         update_dc_bias(ae->d_b1, C_out);
         conv2d_forward_opt2<<<gridConv, block2d>>>(
             ae->d_x0, ae->d_w1, ae->d_h1,
@@ -976,7 +974,6 @@ void gpu_autoencoder_encode_batch(
         );
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b2, 128 * sizeof(float)));
         update_dc_bias(ae->d_b2, C_out);
         conv2d_forward_opt2<<<gridConv, block2d>>>(
             ae->d_p1, ae->d_w2, ae->d_h2,

@@ -47,23 +47,22 @@ void gpu_autoencoder_init(GPUAutoencoder *ae, int batch_size) {
     CHECK_CUDA(cudaMalloc(&ae->d_b5, b5_bytes));
 
     // init weights on host
-// find max weight bytes
-size_t max_w_bytes = w1_bytes;
-if (w2_bytes > max_w_bytes) max_w_bytes = w2_bytes;
-if (w3_bytes > max_w_bytes) max_w_bytes = w3_bytes;
-if (w4_bytes > max_w_bytes) max_w_bytes = w4_bytes;
-if (w5_bytes > max_w_bytes) max_w_bytes = w5_bytes;
+    // find max weight bytes
+    size_t max_w_bytes = w1_bytes;
+    if (w2_bytes > max_w_bytes) max_w_bytes = w2_bytes;
+    if (w3_bytes > max_w_bytes) max_w_bytes = w3_bytes;
+    if (w4_bytes > max_w_bytes) max_w_bytes = w4_bytes;
+    if (w5_bytes > max_w_bytes) max_w_bytes = w5_bytes;
 
-// find max bias bytes
-size_t max_b_bytes = b1_bytes;
-if (b2_bytes > max_b_bytes) max_b_bytes = b2_bytes;
-if (b3_bytes > max_b_bytes) max_b_bytes = b3_bytes;
-if (b4_bytes > max_b_bytes) max_b_bytes = b4_bytes;
-if (b5_bytes > max_b_bytes) max_b_bytes = b5_bytes;
+    // find max bias bytes
+    size_t max_b_bytes = b1_bytes;
+    if (b2_bytes > max_b_bytes) max_b_bytes = b2_bytes;
+    if (b3_bytes > max_b_bytes) max_b_bytes = b3_bytes;
+    if (b4_bytes > max_b_bytes) max_b_bytes = b4_bytes;
+    if (b5_bytes > max_b_bytes) max_b_bytes = b5_bytes;
 
-float *h_w = (float*)malloc(max_w_bytes);
-float *h_b = (float*)malloc(max_b_bytes);
-
+    float *h_w = (float*)malloc(max_w_bytes);
+    float *h_b = (float*)malloc(max_b_bytes);
 
     auto init_wb = [&](float *d_w, size_t w_bytes, float *d_b, size_t b_bytes) {
         size_t w_cnt = w_bytes / sizeof(float);
@@ -251,7 +250,6 @@ void gpu_autoencoder_copy_weights_to_device(
 }
 
 
-// Forward pass for ONE batch (no backward yet)
 float gpu_autoencoder_forward(
     GPUAutoencoder *ae,
     const float *h_input,
@@ -281,7 +279,6 @@ float gpu_autoencoder_forward(
             N * C_out);
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b1, C_out * sizeof(float)));
         update_dc_bias(ae->d_b1, C_out);
         conv2d_forward<<<gridConv, block2d>>>(
             ae->d_x0, ae->d_w1, ae->d_h1,
@@ -316,7 +313,6 @@ float gpu_autoencoder_forward(
             N * C_out);
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b2, 128 * sizeof(float)));
         update_dc_bias(ae->d_b2, C_out);
         conv2d_forward<<<gridConv, block2d>>>(
             ae->d_p1, ae->d_w2, ae->d_h2,
@@ -354,7 +350,6 @@ float gpu_autoencoder_forward(
             N * C_out);
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b3, 128 * sizeof(float)));
         update_dc_bias(ae->d_b3, C_out);
         conv2d_forward<<<gridConv, block2d>>>(
             ae->d_p2, ae->d_w3, ae->d_h3,
@@ -389,7 +384,6 @@ float gpu_autoencoder_forward(
             N * C_out);
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b4, 256 * sizeof(float)));
         update_dc_bias(ae->d_b4, C_out);
         conv2d_forward<<<gridConv, block2d>>>(
             ae->d_u1, ae->d_w4, ae->d_h4,
@@ -424,7 +418,6 @@ float gpu_autoencoder_forward(
             N * C_out);
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b5, 3 * sizeof(float)));
         update_dc_bias(ae->d_b5, C_out);
         conv2d_forward<<<gridConv, block2d>>>(
             ae->d_u2, ae->d_w5, ae->d_out,
@@ -471,7 +464,7 @@ void gpu_autoencoder_backward(GPUAutoencoder *ae, float lr)
     const int pad = 1;
     const int stride = 1;
 
-    //Zero all gradient buffers
+    // Zero all gradient buffers
     CHECK_CUDA(cudaMemset(ae->d_gw1, 0, 256 * 3 * K * K * sizeof(float)));
     CHECK_CUDA(cudaMemset(ae->d_gb1, 0, 256 * sizeof(float)));
     CHECK_CUDA(cudaMemset(ae->d_gw2, 0, 128 * 256 * K * K * sizeof(float)));
@@ -949,7 +942,6 @@ void gpu_autoencoder_encode_batch(
             N_batch * C_out);
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b1, 256 * sizeof(float)));
         update_dc_bias(ae->d_b1, C_out);
         conv2d_forward<<<gridConv, block2d>>>(
             ae->d_x0, ae->d_w1, ae->d_h1,
@@ -984,7 +976,6 @@ void gpu_autoencoder_encode_batch(
         );
 
         // copy bias to constant memory
-        //CHECK_CUDA(cudaMemcpyToSymbol(dc_bias, ae->d_b2, 128 * sizeof(float)));
         update_dc_bias(ae->d_b2, C_out);
         conv2d_forward<<<gridConv, block2d>>>(
             ae->d_p1, ae->d_w2, ae->d_h2,

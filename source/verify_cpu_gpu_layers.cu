@@ -36,10 +36,6 @@ void compare_arrays(const char* name,
            name, max_abs, mean_abs, rmse);
 }
 
-/*-------------------------------------------------------------
-  TEST CONV2D (forward + backward) – cái này bạn đang chạy OK,
-  mình để ví dụ đơn giản N=1 cho gọn.
--------------------------------------------------------------*/
 void test_conv2d()
 {
     printf("==================== test_conv2d ====================\n");
@@ -113,7 +109,6 @@ void test_conv2d()
         d_x, d_w, d_b, d_y,
         N, C_in, H, W,
         C_out, K, pad, stride);
-    CHECK_CUDA(cudaDeviceSynchronize());
 
     CHECK_CUDA(cudaMemcpy(h_y_gpu, d_y, out_size * sizeof(float), cudaMemcpyDeviceToHost));
 
@@ -157,7 +152,6 @@ void test_conv2d()
         d_dy, d_w, d_dx,
         N, C_in, H, W,
         C_out, K, pad, stride);
-    CHECK_CUDA(cudaDeviceSynchronize());
 
     // dW
     int num_w = w_size;
@@ -167,7 +161,6 @@ void test_conv2d()
         d_x, d_dy, d_dw,
         N, C_in, H, W,
         C_out, K, pad, stride);
-    CHECK_CUDA(cudaDeviceSynchronize());
 
     // dB
     int tb = 256;
@@ -175,7 +168,6 @@ void test_conv2d()
     conv2d_backward_bias_naive<<<bb, tb>>>(
         d_dy, d_db,
         N, C_out, H_out, W_out);
-    CHECK_CUDA(cudaDeviceSynchronize());
 
     CHECK_CUDA(cudaMemcpy(h_dx_gpu, d_dx, in_size  * sizeof(float), cudaMemcpyDeviceToHost));
     CHECK_CUDA(cudaMemcpy(h_dw_gpu, d_dw, w_size   * sizeof(float), cudaMemcpyDeviceToHost));
@@ -195,10 +187,6 @@ void test_conv2d()
     cudaFree(d_dy); cudaFree(d_dx); cudaFree(d_dw); cudaFree(d_db);
 }
 
-/*-------------------------------------------------------------
-  TEST MaxPool + UpSample (forward + backward)
-  Quan trọng: truyền đúng H,W (H_input/H_pool), không dùng H_out nhầm.
--------------------------------------------------------------*/
 void test_pool_upsample()
 {
     printf("\n==================== test_pool_upsample ====================\n");
@@ -269,7 +257,6 @@ void test_pool_upsample()
     maxpool2x2_forward<<<gridPool, block2d>>>(
         d_in, d_pool,
         N, C, H, W);
-    CHECK_CUDA(cudaDeviceSynchronize());
 
     CHECK_CUDA(cudaMemcpy(h_pool_gpu, d_pool, pool_size * sizeof(float),
                           cudaMemcpyDeviceToHost));
@@ -304,7 +291,6 @@ void test_pool_upsample()
     maxpool2x2_backward<<<gridPoolB, block2d>>>(
         d_in, d_pool_grad, d_in_grad,
         N, C, H, W);   // H,W = kích thước INPUT (8x8)
-    CHECK_CUDA(cudaDeviceSynchronize());
 
     CHECK_CUDA(cudaMemcpy(h_in_grad_gpu, d_in_grad, in_size * sizeof(float),
                           cudaMemcpyDeviceToHost));
@@ -330,7 +316,6 @@ void test_pool_upsample()
         d_pool, d_up,
         N, C,
         H_pool, W_pool);   // H,W = kích thước input (4x4)
-    CHECK_CUDA(cudaDeviceSynchronize());
 
     CHECK_CUDA(cudaMemcpy(h_up_gpu, d_up, up_size * sizeof(float),
                           cudaMemcpyDeviceToHost));
@@ -365,8 +350,7 @@ void test_pool_upsample()
     upsample2x2_backward<<<gridUpB, block2d>>>(
         d_up_grad, d_pool_grad2,
         N, C,
-        H_pool, W_pool);   // CHÚ Ý: H,W = kích thước INPUT (4x4), KHÔNG phải 8x8
-    CHECK_CUDA(cudaDeviceSynchronize());
+        H_pool, W_pool);   
 
     CHECK_CUDA(cudaMemcpy(h_pool_grad2_gpu, d_pool_grad2, pool_size * sizeof(float),
                           cudaMemcpyDeviceToHost));

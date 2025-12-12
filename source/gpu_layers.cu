@@ -1,6 +1,6 @@
 #include "gpu_layers.h"
 
-// --------------- Conv2D forward (không đổi) ------------------
+// --------------- Conv2D forward ------------------
 __global__ void conv2d_forward_naive(
     const float* __restrict__ input,
     const float* __restrict__ weight,
@@ -131,7 +131,6 @@ __global__ void mse_loss_forward(
     float val = 0.0f;
     if (idx < size) {
         float diff = output[idx] - target[idx];
-        // Mỗi phần tử tự chia size để tổng lại thành mean
         val = diff * diff;
     }
     sdata[tid] = val;
@@ -150,7 +149,6 @@ __global__ void mse_loss_forward(
     }
 }
 
-
 // --------------- ReLU backward ------------------
 __global__ void relu_backward(
     const float* __restrict__ x,
@@ -165,8 +163,7 @@ __global__ void relu_backward(
     }
 }
 
-// --------------- MaxPool 2x2 backward - FIX ------------------
-// BUG FIX: Chỉ ghi vào vị trí max, không ghi đè 4 vị trí
+// --------------- MaxPool 2x2 backward ------------------
 __global__ void maxpool2x2_backward(
     const float* __restrict__ input,
     const float* __restrict__ grad_out,
@@ -208,7 +205,7 @@ __global__ void maxpool2x2_backward(
     if (v10 > m) { m = v10; max_idx = 2; }
     if (v11 > m) { m = v11; max_idx = 3; }
 
-    // FIX: Chỉ ghi vào vị trí max (grad_in đã được zero trước đó)
+    // Chỉ ghi vào vị trí max (grad_in đã được zero trước đó)
     // Mỗi pooling window độc lập, không có conflict
     if (max_idx == 0) grad_in[idx00] = g;
     else if (max_idx == 1) grad_in[idx01] = g;
@@ -356,8 +353,6 @@ __global__ void conv2d_backward_weight_naive(
             }
         }
     }
-
-    // Mỗi thread ghi vào vị trí riêng, không conflict
     dW[idx] += sum;
 }
 
@@ -380,8 +375,6 @@ __global__ void conv2d_backward_bias_naive(
             }
         }
     }
-    
-    // Mỗi thread ghi vào vị trí riêng, không conflict
     dB[c_out] += sum;
 }
 

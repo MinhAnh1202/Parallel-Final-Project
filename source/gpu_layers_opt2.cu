@@ -2,7 +2,6 @@
 #include <cuda_runtime.h>
 #include "gpu_layers_opt2.h"
 
-
 // Optimal configurations
 #define TILE_W 16
 #define TILE_H 16
@@ -46,7 +45,7 @@ __global__ void conv2d_forward_opt2(
 
     // Loop over input channels
     for (int c_in = 0; c_in < C_in; c_in++) {
-        // ✅ OPTIMIZED: Cooperative loading
+        // OPTIMIZED: Cooperative loading
         // Total elements = 18x18 = 324
         // 256 threads → mỗi thread load 1-2 elements
         int total_elements = BLOCK_H * BLOCK_W;
@@ -67,7 +66,7 @@ __global__ void conv2d_forward_opt2(
         }
         __syncthreads();
 
-        // ✅ OPTIMIZED: Compute convolution with unrolling
+        // OPTIMIZED: Compute convolution with unrolling
         if (h_out < H_out && w_out < W_out && n < N) {
             int smem_row = ty * stride;
             int smem_col = tx * stride;
@@ -154,7 +153,7 @@ __global__ void conv2d_backward_input_opt2(
 
                     float dy = s_dY[sy][sx];
 
-                    // CRITICAL FIX: Flip the kernel indices
+                    // Flip the kernel indices
                     int kh_flip = K - 1 - kh;  // 2, 1, 0
                     int kw_flip = K - 1 - kw;  // 2, 1, 0
 
@@ -172,10 +171,7 @@ __global__ void conv2d_backward_input_opt2(
         dX[idx4(n, c_in, h_in, w_in, C_in, H, W)] = value;
     }
 }
-// ============================================================================
-// BACKWARD WEIGHT - FIXED
-// Key fix: Block-level reduction BEFORE atomic
-// ============================================================================
+
 __global__ void conv2d_backward_weight_opt2(
     float* __restrict__ input,
     float* __restrict__ dY,
@@ -214,7 +210,7 @@ __global__ void conv2d_backward_weight_opt2(
         for (int block_h = 0; block_h < num_blocks_h; ++block_h) {
             for (int block_w = 0; block_w < num_blocks_w; ++block_w) {
 
-                // ✅ FIX: Cooperative loading cho dY
+                // Cooperative loading for dY
                 int h_out = block_h * TILE_H;
                 int w_out = block_w * TILE_W;
 
@@ -231,7 +227,7 @@ __global__ void conv2d_backward_weight_opt2(
                     }
                 }
 
-                // ✅ FIX: Cooperative loading cho input với halo
+                // Cooperative loading for input with halo
                 int h_in_base = block_h * TILE_H - pad;
                 int w_in_base = block_w * TILE_W - pad;
 
@@ -265,8 +261,8 @@ __global__ void conv2d_backward_weight_opt2(
         }
     }
 
-    // ✅ FIX: Block-level reduction TRƯỚC atomic
-    // Mỗi kernel element có reduction riêng
+    // Block-level reduction BEFORE atomic
+    // Each kernel element has its own reduction
     #pragma unroll
     for (int kh = 0; kh < K; ++kh) {
         #pragma unroll
@@ -294,9 +290,7 @@ __global__ void conv2d_backward_weight_opt2(
     }
 }
 
-// ============================================================================
-// BACKWARD BIAS - OPTIMIZED (warp-level reduction)
-// ============================================================================
+
 __global__ void conv2d_backward_bias_opt2(
     float* __restrict__ dY,
     float* __restrict__ dB,

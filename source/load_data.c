@@ -93,12 +93,6 @@ void print_cifar10(Cifar10* data){
         }
         printf("\n");
     }
-    // for (int i = 0; i < 2; i++) {
-    //     printf("Label: %d\n", data->test_labels[i]);
-    //     for (int j = 0; j < IMG_SIZE; j++) {
-    //         printf("%f ", data->test_images[i*IMG_SIZE + j]);
-    //     }
-    // }
 }
 
 void free_cifar10(Cifar10* data) {

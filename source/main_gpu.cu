@@ -5,7 +5,7 @@
 #include "load_data.h"
 #include "gpu_autoencoder.h"
 
-// GpuTimer dùng cudaEvent để đo time (đúng spec Phase 2.5)
+// GpuTimer dùng cudaEvent để đo time 
 struct GpuTimer {
     cudaEvent_t start, stop;
     GpuTimer() {

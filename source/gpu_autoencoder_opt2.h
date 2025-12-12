@@ -12,7 +12,6 @@ static const int AE_LATENT_H   = 8;
 static const int AE_LATENT_W   = 8;
 static const int AE_LATENT_DIM = AE_LATENT_C * AE_LATENT_H * AE_LATENT_W;
 
-// This autoencoder matches the project architecture exactly.
 // Layout: NCHW [batch, channels, height, width]
 struct GPUAutoencoder {
     int N;   // batch size

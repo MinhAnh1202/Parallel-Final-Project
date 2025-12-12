@@ -15,7 +15,7 @@ void write_svm_line(FILE* f, int label,
 {
     fprintf(f, "%d", label);
 
-    // In TOÀN BỘ feature, không bỏ qua zero
+    // In toàn bộ feature, không bỏ qua giá trị 0
     for (int j = 0; j < dim; ++j) {
         float v = feat[j];
         fprintf(f, " %d:%g", j + 1, v);
@@ -121,8 +121,6 @@ int main(int argc, char** argv)
                    data.test_images + idx * IMG_SIZE,
                    IMG_SIZE * sizeof(float));
         }
-
-        // **Không còn debug cudaMemcpy w1/b1, không in input nữa**
 
         gpu_autoencoder_encode_batch(&ae, h_batch, h_latent, cur_bs);
 

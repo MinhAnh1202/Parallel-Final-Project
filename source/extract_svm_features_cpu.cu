@@ -17,7 +17,7 @@ void write_svm_line(FILE* f, int label,
 {
     fprintf(f, "%d", label);
 
-    // In TOÀN BỘ feature, không bỏ qua zero
+    // In toàn bộ feature, không bỏ qua giá trị 0
     for (int j = 0; j < dim; ++j) {
         float v = feat[j];
         fprintf(f, " %d:%g", j + 1, v);
@@ -28,14 +28,6 @@ void write_svm_line(FILE* f, int label,
 
 int main(int argc, char** argv)
 {
-    //if (argc < 3) {
-        //fprintf(stderr,
-                //"Usage: %s <path_to_cifar-10-batches-bin> <ae_weights.bin>\n",
-                //argv[0]);
-        //return 1;
-    //}
-    //const char* data_dir    = argv[1];
-    //const char* weight_file = argv[2];
     char* weight_file_cpu = "autoencoder_weights_cpu.bin";
     float learning_rate = 0.001;
 
