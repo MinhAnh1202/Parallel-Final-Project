@@ -15,13 +15,6 @@ void print_memory_usage() {
     }
 }
 
-void save_summary(double total_time, double final_loss, FILE* file) {
-    fprintf(file, "\n*** Training Summary ***\n");
-    fprintf(file, "Total training time: %.2f seconds.\n", total_time);
-    fprintf(file, "Final reconstruction loss: %f\n", final_loss);
-    fclose(file);
-}
-
 uint8_t float_to_pixel(float val) {
     if (val < 0.0f) val = 0.0f;
     if (val > 1.0f) val = 1.0f;
@@ -112,12 +105,6 @@ int main(int argc, char** argv) {
     float* batch_images = (float*)malloc(batch_size * IMG_SIZE * sizeof(float));
     double total_time = 0.0;
     double final_loss = 0.0;
-    char* summary_filename = "training_cpu.txt";
-    FILE* file = fopen(summary_filename, "w");
-    if (!file) {
-        printf("Error opening summary file for writing.\n");
-        return -1;
-    }
 
     // Initialize AutoEncoder
     CPUAutoEncoder autoencoder;
@@ -131,7 +118,6 @@ int main(int argc, char** argv) {
         shuffle_cifar10(&data); 
         double epoch_loss = 0.0;
         printf("Epoch %d/%d\n", epoch + 1, num_epochs);
-        fprintf(file, "Epoch %d/%d\n", epoch + 1, num_epochs);
         for (int batch_id = 0; batch_id < num_batches; batch_id++) {
             // Get the current batch data from the shuffled array
             get_next_batch(&data, batch_size, batch_id, batch_images);
@@ -149,14 +135,12 @@ int main(int argc, char** argv) {
             update_autoencoder_parameters(&autoencoder);
             if ((batch_id + 1) % 100 == 0) {
                 printf("[TRAIN] Epoch %d, batch %d/%d, loss = %f\n", epoch + 1, batch_id + 1, num_batches, current_loss);
-                fprintf(file, "[TRAIN] Epoch %d, batch %d/%d, loss = %f\n", epoch + 1, batch_id + 1, num_batches, current_loss);
             }
         }
         int end_time = clock();
         double epoch_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
         total_time += epoch_time;
         printf("==> Epoch %d finished. Avg Loss: %f, time: %.2f seconds\n", epoch + 1, epoch_loss / num_batches, epoch_time);
-        fprintf(file, "Epoch %d finished. Avg Loss: %f, time: %.2f seconds\n", epoch + 1, epoch_loss / num_batches, epoch_time);
         if(epoch + 1 == 20) final_loss = epoch_loss / num_batches;
     }
 
@@ -169,9 +153,6 @@ int main(int argc, char** argv) {
     save_weights(&autoencoder, "autoencoder_weights_cpu.bin");
     //Save 5 pairs of original and reconstructed images
     sample_reconstructions(&autoencoder, &data, 5);
-    //Save summary to file
-    save_summary(total_time, final_loss, file);
-    fclose(file);
     // Free memory 
     free_autoencoder(&autoencoder);
     free(batch_images);
