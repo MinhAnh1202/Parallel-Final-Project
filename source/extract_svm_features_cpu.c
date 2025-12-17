@@ -1,13 +1,6 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cuda_runtime.h>
+#include "load_data.h"
+#include "cpu_autoencoder.h"
 
-extern "C" {
-  #include "load_data.h"
-  //#include "gpu_autoencoder.h"
-  #include "cpu_autoencoder.h"
-}
 
 #define AE_LATENT_DIM 128 * 8 * 8
 
@@ -17,7 +10,7 @@ void write_svm_line(FILE* f, int label,
 {
     fprintf(f, "%d", label);
 
-    // In toàn bộ feature, không bỏ qua giá trị 0
+    // In TOÀN BỘ feature, không bỏ qua zero
     for (int j = 0; j < dim; ++j) {
         float v = feat[j];
         fprintf(f, " %d:%g", j + 1, v);
@@ -38,9 +31,6 @@ int main(int argc, char** argv)
 
     // batch_size cho encoder khi extract feature
     int batch_size = 64;
-    //GPUAutoencoder ae;
-    //gpu_autoencoder_init(&ae, batch_size);
-    //gpu_autoencoder_load_weights(&ae, weight_file);
 
     CPUAutoEncoder autoencoder;
     initialize_autoencoder(&autoencoder, batch_size, learning_rate);
@@ -61,7 +51,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    int N_train           = 10000;//TRAIN_NUM; // 50000
+    int N_train           = 10000;
     int num_batches_train = (N_train + batch_size - 1) / batch_size;
 
     printf("[SVM] Extracting train features...\n");
