@@ -39,15 +39,13 @@ __global__ void conv2d_forward_opt2(
 
     float value = 0.0f;
 
-    // Base position for loading (với padding)
+    // Base position for loading (with padding)
     int row_start = blockIdx.y * TILE_H * stride - pad;
     int col_start = blockIdx.x * TILE_W * stride - pad;
 
     // Loop over input channels
     for (int c_in = 0; c_in < C_in; c_in++) {
         // OPTIMIZED: Cooperative loading
-        // Total elements = 18x18 = 324
-        // 256 threads → mỗi thread load 1-2 elements
         int total_elements = BLOCK_H * BLOCK_W;
 
         for (int idx = tid; idx < total_elements; idx += num_threads) {

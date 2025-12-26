@@ -4,7 +4,6 @@
 
 #define TILE_W 16
 #define TILE_H 16
-// Kích thước Kernel
 #define K 3
 #define R (K/2) // Radius = 1
 #define BLOCK_W (TILE_W + 2 * R)
@@ -33,7 +32,6 @@ void update_dc_bias(float* d_bias_ptr, int count);
 __global__ void conv2d_forward_opt2(
     float* __restrict__ input,    // [N, C_in, H, W]
     float* __restrict__ weight,   // [C_out, C_in, K, K]
-    // float* bias,     // [C_out]
     float* __restrict__ output,   // [N, C_out, H_out, W_out]
     int N, int C_in, int H, int W,
     int C_out, int pad, int stride);
@@ -53,7 +51,7 @@ __global__ void upsample2x2_forward(
 __global__ void mse_loss_forward(
     float* __restrict__ output,
     float* __restrict__ target,
-    float* __restrict__ loss,   // single float on device
+    float* __restrict__ loss,  
     int size);
 
 __global__ void relu_backward(
