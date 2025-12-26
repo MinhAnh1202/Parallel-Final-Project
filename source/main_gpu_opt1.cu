@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
     fflush(stdout);
 
     // save weights
-    gpu_autoencoder_save_weights(&ae, "ae_weights_gpu_opt1.bin");
+    gpu_autoencoder_save_weights(&ae, "ae_weights.bin");
 
     // ---- cleanup ----
     gpu_autoencoder_free(&ae);
