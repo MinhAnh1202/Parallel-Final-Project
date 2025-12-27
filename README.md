@@ -84,7 +84,7 @@ Di chuyển đến thư mục `source/` và sử dụng các lệnh sau:
 
 ### Triển Khai CPU
 ```bash
-gcc -O3 -fopenmp -lm \
+gcc -O2 \
     main.c \
     load_data.c \
     cpu_autoencoder.c \
@@ -104,7 +104,7 @@ nvcc -O3 -arch=sm_75 \
 
 ### Triển Khai GPU (Tối Ưu Hóa 1)
 ```bash
-nvcc -O3 -arch=sm_75 \
+nvcc -arch=sm_75 \
     main_gpu_opt1.cu \
     load_data.cu \
     gpu_autoencoder_opt1.cu \
@@ -114,7 +114,7 @@ nvcc -O3 -arch=sm_75 \
 
 ### Triển Khai GPU (Tối Ưu Hóa 2)
 ```bash
-nvcc -O3 -arch=sm_75 \
+nvcc -arch=sm_75 \
     main_gpu_opt2.cu \
     load_data.cu \
     gpu_autoencoder_opt2.cu \
@@ -210,16 +210,36 @@ Saved pair 1: original vs reconstructed
 - **Giá Trị Loss**: Mean squared error mỗi epoch
 - **Chất Lượng Tái Tạo**: File so sánh trực quan
 
-## Cấu Trúc Dự Án
+## Cấu Trúc Dự Án (Cấu trúc folder Drive)
 ```
-├── source/                 # Mã nguồn
+├── Source Code/                 # Mã nguồn
 │   ├── main.c             # Chương trình chính CPU
 │   ├── main_gpu*.cu       # Chương trình chính GPU
 │   ├── *_autoencoder.*    # Triển khai autoencoder
 │   ├── *_layers.*         # Triển khai các lớp
-│   └── load_data.*        # Tiện ích tải dữ liệu
-├── notebook/              # Jupyter notebooks để phân tích
-└── README.md             # File này
+│   ├── load_data.*        # Tiện ích tải dữ liệu
+│   └── README.md             # File này
+├── Notebooks/              # Jupyter notebooks để phân tích
+│   ├── CPU.ipynb          # Notebook train Autoencoder và trích xuất đặc trưng của CPU
+│   ├── GPU naive.ipynb    # Notebook train Autoencoder và trích xuất đặc trưng GPU naive
+|   ├── GPU_opt1.ipynb     # Notebook train Autoencoder và trích xuất đặc trưng GPU version 1
+|   ├── GPU_opt2.ipynb     # Notebook train Autoencoder và trích xuất đặc trưng GPU version 2
+|   ├── Demo CPU.ipynb     # Notebook chạy demo CPU trong video
+|   ├── Demo GPU naive.ipynb    # Notebook chạy demo GPU naive trong video
+|   ├── Demo GPU_opt1.ipynb     # Notebook chạy demo GPU version 1 trong video
+|   ├── Demo GPU opt2.ipynb     # Notebook chạy demo GPU version 2 trong video
+│   ├── Reconstruction.ipynb         # Notebook hiển thị ảnh Reconstructed vs Original
+│   ├── Verify kernel outputs.ipynb         # Notebook kiểm tra kết quả kernel các version so với CPU
+│   ├── Verify outputs.ipynb         # Notebook kiểm tra kết quả output của các version với CPU
+│   └── train_svm.ipynb         # Notebook thực hiện train SVM các version
+├── Trained model weights/
+│   ├── ae_weights_gpu_naive.bin          # Trọng số của phiên bản GPU naive
+│   ├── ae_weights_gpu_opt1.bin           # Trọng số của phiên bản GPU version 1
+│   ├── ae_weights_gpu_opt2.bin           # Trọng số của phiên bản GPU version 2
+│   └── autoencoder_weights_cpu.bin       # Trọng số của phiên bản CPU
+├── Link of Presentation Video.txt # File txt chứa video thuyết trình
+├── Team Plan and Work Distribution.pdf # File pdf chứa plan và work distribution
+└── Project Report.ipynb         # Report notebook chứa nội dung đồ án
 ```
 
 ## Tác Giả
