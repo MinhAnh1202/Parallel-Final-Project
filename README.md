@@ -15,6 +15,8 @@ Sau đó trích xuất đặc trưng và đưa qua mô hinh SVM để phân lo�
 ## Lưu ý
 Trong các notebook, nhóm thực hiện copy trực tiếp source code các file vào và dùng lệnh `%%writefile` ngay trên kernel của notebook Colab. Khi thực hiện chạy lại các notebook nhóm đã thực hiện, chỉ cần thực hiện re-run notebook đó chứ không cần thêm file,...
 
+Để thực thi file `train_svm.ipynb` trên Google Colab, cần thiết lập cấu trúc thư mục tại `/content` bao gồm: raw, cpu, naive, opt1 và opt2. Trong đó, các thư mục dùng để chứa các file đặc trưng đã trích xuất (như train_svm.txt, test_svm.txt).
+
 ## Yêu Cầu Phần Cứng
 
 ### Yêu Cầu Tối Thiểu
